@@ -15,26 +15,33 @@ This project was created as a polished browser-game prototype. The goal is to sh
 
 ## How To Play
 
-Use each number in the puzzle range once.
+Choose a puzzle size: `3x3`, `4x4`, or `5x5`.
+
+Use each number in the puzzle range once:
+
+- `3x3`: numbers `1-9`, target `15`
+- `4x4`: numbers `1-16`, target `34`
+- `5x5`: numbers `1-25`, target `65`
 
 Every row, column, and diagonal must add up to the target sum.
 
-The target changes from puzzle to puzzle and stays below `100`.
-
 ## Features
 
-- Playable 3x3 suMMetry puzzle
-- 100 puzzle variations
-- Changing target sums under 100
+- Playable 3x3, 4x4, and 5x5 magic-square puzzles
 - Fixed clue cells
 - Number-only inputs
 - Instant right/wrong feedback for each input
 - Duplicate number detection
 - Row, column, and diagonal validation
 - Helpful explanation when a completed line misses the target
+- Timer that starts on first input and stops on solve
+- Local top-five leaderboard per difficulty
+- Completion modal with celebration animation
+- Hint system with three hints per puzzle
 - Show Answer button for demo/review mode
 - Reset and New Puzzle controls
 - Keyboard arrow navigation
+- Mobile number pad for touch play
 - Responsive layout for desktop and mobile
 - Dark monospace game interface
 
@@ -62,15 +69,14 @@ http://localhost:5173/summetry/
 
 - `index.html` - app structure
 - `styles.css` - responsive visual design
-- `script.js` - puzzle generation, validation, feedback, and interactions
+- `script.js` - puzzle generation, validation, timer, leaderboard, hints, feedback, and interactions
 
 ## Suggested Roadmap
 
 - Add a daily puzzle seed
-- Add win streaks and completion time
+- Add win streaks
 - Add shareable result text
-- Add a harder 4x4 mode
-- Add a puzzle selector
+- Add puzzle archives
 - Add difficulty levels based on clue count
 
 ## Project Note
