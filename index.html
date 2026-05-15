@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>suMMetry - Product Pickle Games Prototype</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="game-panel" aria-labelledby="game-title">
+        <header class="game-header">
+          <a class="brand-link" href="https://games.productpickle.online" target="_blank" rel="noreferrer">
+            Product Pickle Games
+          </a>
+          <div class="title-row">
+            <div>
+              <p class="kicker">Logic puzzle prototype</p>
+              <h1 id="game-title">suMMetry</h1>
+            </div>
+            <div class="target-box" aria-label="Target sum">
+              <span>Target</span>
+              <strong id="target-sum">15</strong>
+            </div>
+          </div>
+        </header>
+
+        <section class="status-strip" aria-live="polite">
+          <div>
+            <span class="status-label">Puzzle</span>
+            <strong id="puzzle-name">Classic 3x3</strong>
+          </div>
+          <div>
+            <span class="status-label">Progress</span>
+            <strong id="progress-count">0/6</strong>
+          </div>
+          <div>
+            <span class="status-label">Checks</span>
+            <strong id="line-status">0/8</strong>
+          </div>
+        </section>
+
+        <section class="board-wrap" aria-label="suMMetry board">
+          <div id="board" class="board"></div>
+        </section>
+
+        <p id="message" class="message">Fill the empty cells so every row, column, and diagonal adds to 15.</p>
+
+        <div class="actions">
+          <button id="check-button" type="button">Check</button>
+          <button id="answer-button" type="button">Show Answer</button>
+          <button id="reset-button" type="button">Reset</button>
+          <button id="next-button" type="button">New Puzzle</button>
+        </div>
+      </section>
+
+      <aside class="side-panel" aria-label="How to play">
+        <h2>How It Works</h2>
+        <ol>
+          <li>Use each number from 1 to 9 once.</li>
+          <li>Every row, column, and diagonal must hit the target sum.</li>
+          <li>Fixed cells cannot be changed.</li>
+        </ol>
+        <div class="feedback-guide">
+          <h3>Feedback</h3>
+          <p><span class="guide-dot good-dot"></span>Green means that number is correct.</p>
+          <p><span class="guide-dot bad-dot"></span>Red means it is wrong or repeated.</p>
+        </div>
+      </aside>
+    </main>
+
+    <script src="./script.js"></script>
+  </body>
+</html>
