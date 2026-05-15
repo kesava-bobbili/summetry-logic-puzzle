@@ -1,23 +1,50 @@
-const puzzles = [
-  {
-    name: "Classic 3x3",
-    target: 15,
-    solution: [8, 1, 6, 3, 5, 7, 4, 9, 2],
-    givens: [8, null, null, null, 5, null, null, null, 2],
-  },
-  {
-    name: "Cross Start",
-    target: 15,
-    solution: [6, 7, 2, 1, 5, 9, 8, 3, 4],
-    givens: [null, 7, null, 1, 5, 9, null, 3, null],
-  },
-  {
-    name: "Corner Lock",
-    target: 15,
-    solution: [4, 3, 8, 9, 5, 1, 2, 7, 6],
-    givens: [4, null, 8, null, 5, null, 2, null, 6],
-  },
+const magicBoards = [
+  [8, 1, 6, 3, 5, 7, 4, 9, 2],
+  [6, 1, 8, 7, 5, 3, 2, 9, 4],
+  [4, 9, 2, 3, 5, 7, 8, 1, 6],
+  [2, 9, 4, 7, 5, 3, 6, 1, 8],
+  [8, 3, 4, 1, 5, 9, 6, 7, 2],
+  [4, 3, 8, 9, 5, 1, 2, 7, 6],
+  [6, 7, 2, 1, 5, 9, 8, 3, 4],
+  [2, 7, 6, 9, 5, 1, 4, 3, 8],
 ];
+
+const cluePatterns = [
+  [0, 4, 8],
+  [2, 4, 6],
+  [0, 2, 4, 6],
+  [0, 2, 4, 8],
+  [0, 4, 6, 8],
+  [2, 4, 6, 8],
+  [1, 3, 4, 5],
+  [3, 4, 5, 7],
+  [0, 1, 4, 8],
+  [2, 3, 4, 6],
+  [0, 4, 5, 6],
+  [2, 4, 7, 8],
+  [0, 3, 4, 7],
+];
+
+const puzzles = createPuzzleBank(100);
+
+function createPuzzleBank(count) {
+  return Array.from({ length: count }, (_, index) => {
+    const offset = index % 29;
+    const solution = magicBoards[index % magicBoards.length].map((value) => value + offset);
+    const pattern = cluePatterns[index % cluePatterns.length];
+    const givens = solution.map((value, cellIndex) => (pattern.includes(cellIndex) ? value : null));
+    const lowest = 1 + offset;
+    const highest = 9 + offset;
+
+    return {
+      name: `Puzzle ${index + 1} of ${count}`,
+      target: 15 + offset * 3,
+      solution,
+      givens,
+      range: [lowest, highest],
+    };
+  });
+}
 
 const lines = [
   [0, 1, 2],
@@ -58,7 +85,7 @@ function buildBoard() {
     input.className = "cell";
     input.type = "text";
     input.inputMode = "numeric";
-    input.maxLength = 1;
+    input.maxLength = 2;
     input.setAttribute("aria-label", `Cell ${index + 1}`);
     input.dataset.index = index;
 
@@ -76,12 +103,14 @@ function buildBoard() {
   });
 
   updateStatus();
-  setMessage(`Fill the empty cells so every row, column, and diagonal adds to ${puzzle.target}.`);
+  setMessage(
+    `Use each number from ${puzzle.range[0]} to ${puzzle.range[1]} once. Every direction adds to ${puzzle.target}.`,
+  );
 }
 
 function handleInput(event) {
   const input = event.target;
-  input.value = input.value.replace(/[^1-9]/g, "").slice(0, 1);
+  input.value = input.value.replace(/\D/g, "").slice(0, 2);
   updateCellFeedback(input);
   updateStatus();
 }
@@ -159,7 +188,7 @@ function checkBoard() {
   if (correctLines === lines.length && !missing && duplicates.length === 0) {
     setMessage("Solved. Every direction keeps the sum constant.", "win");
   } else if (duplicates.length > 0) {
-    setMessage("Each number from 1 to 9 should appear once.", "warn");
+    setMessage(`Each number from ${puzzle.range[0]} to ${puzzle.range[1]} should appear once.`, "warn");
   } else if (missing) {
     setMessage("Good start. Fill every empty cell, then check again.");
   } else {
@@ -181,7 +210,7 @@ function showAnswer() {
   });
 
   updateStatus();
-  setMessage("Answer shown. Study how each row, column, and diagonal totals 15.", "win");
+  setMessage(`Answer shown. Study how each row, column, and diagonal totals ${puzzle.target}.`, "win");
 }
 
 function updateCellFeedback(input) {
@@ -195,7 +224,16 @@ function updateCellFeedback(input) {
   }
 
   if (!value) {
-    setMessage(`Cell ${index + 1}: enter a number from 1 to 9.`);
+    setMessage(`Cell ${index + 1}: enter a number from ${currentPuzzle().range[0]} to ${currentPuzzle().range[1]}.`);
+    return;
+  }
+
+  if (!isInPuzzleRange(value)) {
+    input.classList.add("bad");
+    setMessage(
+      `Cell ${index + 1}: ${value} is outside this puzzle. Use ${currentPuzzle().range[0]} to ${currentPuzzle().range[1]}.`,
+      "warn",
+    );
     return;
   }
 
@@ -204,7 +242,7 @@ function updateCellFeedback(input) {
 
   if (duplicateIndexes.includes(index)) {
     input.classList.add("bad");
-    setMessage(`Cell ${index + 1}: ${value} is already used. Each number can appear only once.`, "warn");
+    setMessage(`Cell ${index + 1}: ${value} is already used. Each puzzle number can appear only once.`, "warn");
     return;
   }
 
@@ -253,6 +291,11 @@ function relatedLineIssue(index, cells) {
   return null;
 }
 
+function isInPuzzleRange(value) {
+  const [lowest, highest] = currentPuzzle().range;
+  return value >= lowest && value <= highest;
+}
+
 function findDuplicates(cells) {
   const seen = new Map();
   const duplicateIndexes = [];
@@ -296,6 +339,10 @@ function resetPuzzle() {
 function nextPuzzle() {
   puzzleIndex = (puzzleIndex + 1) % puzzles.length;
   buildBoard();
+
+  if (puzzleIndex === 0) {
+    setMessage("Back to Puzzle 1. You completed the 100-puzzle loop.");
+  }
 }
 
 function sum(valuesToAdd) {
