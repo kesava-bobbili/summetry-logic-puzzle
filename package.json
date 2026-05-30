@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "private": false,
   "description": "A playable suMMetry number-and-logic puzzle project.",
+  "homepage": "https://kesava-bobbili.github.io/summetry-logic-puzzle/",
   "scripts": {
     "start": "python3 -m http.server 5173",
     "test": "node tests/verify-puzzles.mjs"

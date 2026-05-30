@@ -1,5 +1,7 @@
 # suMMetry
-🔗 **Live Demo:** [Play suMMetry](https://kesava-bobbili.github.io/summetry-logic-puzzle/)
+
+**[Play live](https://kesava-bobbili.github.io/summetry-logic-puzzle/)** · [Repository](https://github.com/kesava-bobbili/summetry-logic-puzzle)
+
 A playable number-and-logic puzzle project.
 
 suMMetry is built around one simple idea: fill the grid so the sum stays constant in every direction. The game is quick to understand, but every move matters because each number affects a row, a column, and sometimes a diagonal.
@@ -54,6 +56,10 @@ Every row, column, and diagonal must add up to the target sum. Each generated pu
 - Mobile number pad for touch play
 - Responsive layout for desktop and mobile
 - Dark monospace game interface
+
+## Play Online
+
+https://kesava-bobbili.github.io/summetry-logic-puzzle/
 
 ## Run Locally
 
