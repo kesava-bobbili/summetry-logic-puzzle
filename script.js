@@ -1,8 +1,9 @@
-const difficulties = {
-  3: { size: 3, target: 15, max: 9, clues: 3 },
-  4: { size: 4, target: 34, max: 16, clues: 6 },
-  5: { size: 5, target: 65, max: 25, clues: 9 },
-};
+import {
+  RULES_MESSAGE,
+  createLines,
+  createPuzzle,
+  gridSizes,
+} from "./puzzle-engine.mjs";
 
 const board = document.querySelector("#board");
 const targetSum = document.querySelector("#target-sum");
@@ -18,7 +19,8 @@ const answerButton = document.querySelector("#answer-button");
 const resetButton = document.querySelector("#reset-button");
 const nextButton = document.querySelector("#next-button");
 const leaderboardButton = document.querySelector("#leaderboard-button");
-const difficultyButtons = document.querySelectorAll(".difficulty-button");
+const sizeButtons = document.querySelectorAll(".size-button");
+const clueLevelButtons = document.querySelectorAll(".clue-level-button");
 const completeModal = document.querySelector("#complete-modal");
 const completeTime = document.querySelector("#complete-time");
 const playAgainButton = document.querySelector("#play-again-button");
@@ -28,6 +30,7 @@ const closeLeaderboardButton = document.querySelector("#close-leaderboard-button
 const confettiLayer = document.querySelector("#confetti-layer");
 
 let activeSize = 3;
+let activeClueLevel = "medium";
 let puzzleCounter = 1;
 let puzzle = null;
 let lines = [];
@@ -38,9 +41,10 @@ let timerId = null;
 let timerStarted = false;
 let solved = false;
 
-function newPuzzle(size = activeSize) {
+function newPuzzle(size = activeSize, clueLevel = activeClueLevel) {
   completeModal.classList.add("hidden");
   activeSize = size;
+  activeClueLevel = clueLevel;
   stopTimer();
   elapsedSeconds = 0;
   timerStarted = false;
@@ -48,111 +52,16 @@ function newPuzzle(size = activeSize) {
   hintsRemaining = 3;
   selectedCellIndex = null;
   lines = createLines(size);
-  puzzle = createPuzzle(size, puzzleCounter);
+  puzzle = createPuzzle(size, puzzleCounter, clueLevel);
   puzzleCounter += 1;
   buildBoard();
   buildNumberPad();
-  updateDifficultyButtons();
+  updateSizeButtons();
+  updateClueLevelButtons();
   updateStatus();
   updateTimer();
   updateHintButton();
-  setMessage(`Use each number from 1 to ${puzzle.max} once. Every direction adds to ${puzzle.target}.`);
-}
-
-function createPuzzle(size, seed) {
-  const config = difficulties[size];
-  const solution = transformBoard(createMagicSquare(size), size, seed);
-  const givens = solution.map((value, index) => (pickClueIndexes(size, config.clues, seed).includes(index) ? value : null));
-
-  return {
-    name: `${size}x${size} Puzzle ${seed}`,
-    size,
-    target: config.target,
-    max: config.max,
-    solution,
-    givens,
-  };
-}
-
-function createMagicSquare(size) {
-  if (size === 4) {
-    return [16, 2, 3, 13, 5, 11, 10, 8, 9, 7, 6, 12, 4, 14, 15, 1];
-  }
-
-  const values = Array(size * size).fill(0);
-  let row = 0;
-  let col = Math.floor(size / 2);
-
-  for (let value = 1; value <= size * size; value += 1) {
-    values[row * size + col] = value;
-    const nextRow = (row - 1 + size) % size;
-    const nextCol = (col + 1) % size;
-
-    if (values[nextRow * size + nextCol]) {
-      row = (row + 1) % size;
-    } else {
-      row = nextRow;
-      col = nextCol;
-    }
-  }
-
-  return values;
-}
-
-function transformBoard(values, size, seed) {
-  const transforms = [
-    (row, col) => [row, col],
-    (row, col) => [col, size - 1 - row],
-    (row, col) => [size - 1 - row, size - 1 - col],
-    (row, col) => [size - 1 - col, row],
-    (row, col) => [row, size - 1 - col],
-    (row, col) => [size - 1 - row, col],
-    (row, col) => [col, row],
-    (row, col) => [size - 1 - col, size - 1 - row],
-  ];
-  const transform = transforms[seed % transforms.length];
-  const output = Array(values.length);
-
-  values.forEach((value, index) => {
-    const row = Math.floor(index / size);
-    const col = index % size;
-    const [newRow, newCol] = transform(row, col);
-    output[newRow * size + newCol] = value;
-  });
-
-  return output;
-}
-
-function pickClueIndexes(size, clueCount, seed) {
-  const total = size * size;
-  const indexes = [0, Math.floor(total / 2), total - 1];
-  let cursor = (seed * 7 + size) % total;
-
-  while (indexes.length < clueCount) {
-    if (!indexes.includes(cursor)) {
-      indexes.push(cursor);
-    }
-
-    cursor = (cursor + size + 2) % total;
-  }
-
-  return indexes;
-}
-
-function createLines(size) {
-  const result = [];
-
-  for (let row = 0; row < size; row += 1) {
-    result.push(Array.from({ length: size }, (_, col) => row * size + col));
-  }
-
-  for (let col = 0; col < size; col += 1) {
-    result.push(Array.from({ length: size }, (_, row) => row * size + col));
-  }
-
-  result.push(Array.from({ length: size }, (_, index) => index * size + index));
-  result.push(Array.from({ length: size }, (_, index) => index * size + (size - 1 - index)));
-  return result;
+  setMessage(RULES_MESSAGE);
 }
 
 function buildBoard() {
@@ -170,7 +79,7 @@ function buildBoard() {
     input.setAttribute("aria-label", `Cell ${index + 1}`);
     input.dataset.index = index;
 
-    if (value) {
+    if (value !== null) {
       input.value = value;
       input.readOnly = true;
       input.classList.add("fixed");
@@ -265,6 +174,10 @@ function values() {
   return [...board.querySelectorAll(".cell")].map((cell) => Number(cell.value) || null);
 }
 
+function totalCells() {
+  return puzzle.size * puzzle.size;
+}
+
 function updateStatus() {
   const cells = values();
   const filled = cells.filter(Boolean).length;
@@ -273,7 +186,7 @@ function updateStatus() {
     return lineValues.every(Boolean) && sum(lineValues) === puzzle.target;
   }).length;
 
-  progressCount.textContent = `${filled}/${puzzle.max}`;
+  progressCount.textContent = `${filled}/${totalCells()}`;
   lineStatus.textContent = `${correctLines}/${lines.length}`;
 }
 
@@ -288,11 +201,8 @@ function checkBoard() {
 
   const cells = values();
   const missing = cells.some((value) => !value);
-  const duplicates = findDuplicates(cells);
 
-  if (duplicates.length > 0) {
-    setMessage(`Each number from 1 to ${puzzle.max} should appear once.`, "warn");
-  } else if (missing) {
+  if (missing) {
     setMessage("Good start. Fill every empty cell, then check again.");
   } else {
     setMessage("Some lines miss the target. Adjust the highlighted cells.", "warn");
@@ -301,7 +211,6 @@ function checkBoard() {
 
 function markBoardAndCheckSolved() {
   const cells = values();
-  const duplicates = findDuplicates(cells);
   const badCells = new Set();
   let correctLines = 0;
 
@@ -319,24 +228,31 @@ function markBoardAndCheckSolved() {
     }
   });
 
-  duplicates.forEach((index) => badCells.add(index));
   badCells.forEach((index) => markCell(index, "bad"));
   updateStatus();
 
-  return correctLines === lines.length && cells.every(Boolean) && duplicates.length === 0;
+  return correctLines === lines.length && cells.every(Boolean);
 }
 
 function detectSolved() {
-  if (isSolved()) {
+  if (isBoardSolved()) {
     clearMarks();
     markBoardAndCheckSolved();
     finishPuzzle();
   }
 }
 
-function isSolved() {
+function isBoardSolved() {
   const cells = values();
-  return cells.every((value, index) => value === puzzle.solution[index]);
+
+  if (!cells.every(Boolean)) {
+    return false;
+  }
+
+  return lines.every((line) => {
+    const lineValues = line.map((index) => cells[index]);
+    return sum(lineValues) === puzzle.target;
+  });
 }
 
 function showAnswer() {
@@ -390,7 +306,9 @@ function useHint() {
 
 function findHintIndex() {
   const cells = values();
-  const editableWrong = cells.findIndex((value, index) => !puzzle.givens[index] && value !== puzzle.solution[index]);
+  const editableWrong = cells.findIndex(
+    (value, index) => puzzle.givens[index] === null && value !== puzzle.solution[index],
+  );
   return editableWrong === -1 ? null : editableWrong;
 }
 
@@ -415,22 +333,23 @@ function updateCellFeedback(input) {
     return;
   }
 
-  const duplicateIndexes = findDuplicates(values());
+  const cells = values();
+  const issue = relatedLineIssue(index, cells);
 
-  if (duplicateIndexes.includes(index)) {
+  if (issue) {
     input.classList.add("bad");
-    setMessage(`Cell ${index + 1}: ${value} is already used. Each puzzle number can appear only once.`, "warn");
+    setMessage(`Cell ${index + 1}: its ${issue.name} totals ${issue.total}, not ${puzzle.target}.`, "warn");
     return;
   }
 
   if (value === puzzle.solution[index]) {
     input.classList.add("good");
-    setMessage(`Cell ${index + 1}: correct. This number keeps the hidden solution balanced.`, "win");
+    setMessage(`Cell ${index + 1}: fits the unique solution for this puzzle.`, "win");
     return;
   }
 
   input.classList.add("bad");
-  setMessage(`Cell ${index + 1}: wrong. ${explainWrongCell(index, values())}`, "warn");
+  setMessage(`Cell ${index + 1}: does not match the unique solution. ${explainWrongCell(index, cells)}`, "warn");
 }
 
 function explainWrongCell(index, cells) {
@@ -440,7 +359,7 @@ function explainWrongCell(index, cells) {
     return `Its ${issue.name} totals ${issue.total}, not ${puzzle.target}.`;
   }
 
-  return "This spot needs a different number so all crossing lines can reach the target.";
+  return "Try a different value so the crossing lines can reach the target.";
 }
 
 function relatedLineIssue(index, cells) {
@@ -473,26 +392,6 @@ function relatedLineIssue(index, cells) {
 
 function isInPuzzleRange(value) {
   return value >= 1 && value <= puzzle.max;
-}
-
-function findDuplicates(cells) {
-  const seen = new Map();
-  const duplicateIndexes = [];
-
-  cells.forEach((value, index) => {
-    if (!value) {
-      return;
-    }
-
-    if (seen.has(value)) {
-      duplicateIndexes.push(seen.get(value), index);
-      return;
-    }
-
-    seen.set(value, index);
-  });
-
-  return [...new Set(duplicateIndexes)];
 }
 
 function finishPuzzle() {
@@ -533,7 +432,7 @@ function leaderboardKey(size) {
 function showLeaderboard() {
   leaderboardList.innerHTML = "";
 
-  Object.values(difficulties).forEach(({ size }) => {
+  Object.values(gridSizes).forEach(({ size }) => {
     const section = document.createElement("section");
     const title = document.createElement("h3");
     const list = document.createElement("ol");
@@ -598,12 +497,18 @@ function resetPuzzle() {
   updateStatus();
   updateTimer();
   updateHintButton();
-  setMessage(`Use each number from 1 to ${puzzle.max} once. Every direction adds to ${puzzle.target}.`);
+  setMessage(RULES_MESSAGE);
 }
 
-function updateDifficultyButtons() {
-  difficultyButtons.forEach((button) => {
+function updateSizeButtons() {
+  sizeButtons.forEach((button) => {
     button.classList.toggle("active", Number(button.dataset.size) === activeSize);
+  });
+}
+
+function updateClueLevelButtons() {
+  clueLevelButtons.forEach((button) => {
+    button.classList.toggle("active", button.dataset.level === activeClueLevel);
   });
 }
 
@@ -657,19 +562,22 @@ function sum(valuesToAdd) {
   return valuesToAdd.reduce((total, value) => total + value, 0);
 }
 
-difficultyButtons.forEach((button) => {
-  button.addEventListener("click", () => newPuzzle(Number(button.dataset.size)));
+sizeButtons.forEach((button) => {
+  button.addEventListener("click", () => newPuzzle(Number(button.dataset.size), activeClueLevel));
+});
+clueLevelButtons.forEach((button) => {
+  button.addEventListener("click", () => newPuzzle(activeSize, button.dataset.level));
 });
 checkButton.addEventListener("click", checkBoard);
 hintButton.addEventListener("click", useHint);
 answerButton.addEventListener("click", showAnswer);
 resetButton.addEventListener("click", resetPuzzle);
-nextButton.addEventListener("click", () => newPuzzle(activeSize));
+nextButton.addEventListener("click", () => newPuzzle(activeSize, activeClueLevel));
 leaderboardButton.addEventListener("click", showLeaderboard);
 playAgainButton.addEventListener("click", () => {
   completeModal.classList.add("hidden");
-  newPuzzle(activeSize);
+  newPuzzle(activeSize, activeClueLevel);
 });
 closeLeaderboardButton.addEventListener("click", () => leaderboardModal.classList.add("hidden"));
 
-newPuzzle(3);
+newPuzzle(3, "medium");

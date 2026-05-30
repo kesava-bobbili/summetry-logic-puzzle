@@ -15,27 +15,37 @@ This project was created as a polished browser-game prototype. The goal is to sh
 
 ## How To Play
 
+Fill the grid so that every row, every column, and both diagonals add up to the same target sum. Repeating numbers is allowed as long as the values stay within the allowed range for the selected grid size.
+
 Choose a puzzle size: `3x3`, `4x4`, or `5x5`.
 
-Use each number in the puzzle range once:
+Choose a difficulty:
 
-- `3x3`: numbers `1-9`, target `15`
-- `4x4`: numbers `1-16`, target `34`
-- `5x5`: numbers `1-25`, target `65`
+- **Easy** — about 50–60% of cells prefilled
+- **Medium** — about 35–45% prefilled
+- **Hard** — about 20–30% prefilled
 
-Every row, column, and diagonal must add up to the target sum.
+Allowed values and target sums:
+
+- `3x3`: digits `1–9`, target `15`
+- `4x4`: values `1–16`, target `34`
+- `5x5`: values `1–25`, target `65`
+
+Every row, column, and diagonal must add up to the target sum. Each generated puzzle has exactly one valid solution.
 
 ## Features
 
-- Playable 3x3, 4x4, and 5x5 magic-square puzzles
+- Playable 3x3, 4x4, and 5x5 sum puzzles
+- Easy, Medium, and Hard clue levels
+- Unique-solution puzzle generation with backtracking verification
+- Repeating numbers allowed within the grid range
 - Fixed clue cells
 - Number-only inputs
 - Instant right/wrong feedback for each input
-- Duplicate number detection
 - Row, column, and diagonal validation
 - Helpful explanation when a completed line misses the target
 - Timer that starts on first input and stops on solve
-- Local top-five leaderboard per difficulty
+- Local top-five leaderboard per grid size
 - Completion modal with celebration animation
 - Hint system with three hints per puzzle
 - Show Answer button for demo/review mode
@@ -65,11 +75,21 @@ If this folder is inside a larger workspace, visit:
 http://localhost:5173/summetry/
 ```
 
+## Verify Puzzles
+
+Run the unique-solution verification checks:
+
+```bash
+node tests/verify-puzzles.mjs
+```
+
 ## Project Files
 
 - `index.html` - app structure
 - `styles.css` - responsive visual design
-- `script.js` - puzzle generation, validation, timer, leaderboard, hints, feedback, and interactions
+- `script.js` - UI, validation, timer, leaderboard, hints, feedback, and interactions
+- `puzzle-engine.mjs` - puzzle generation, solver, and uniqueness checks
+- `tests/verify-puzzles.mjs` - automated puzzle verification
 
 ## Suggested Roadmap
 
@@ -77,7 +97,7 @@ http://localhost:5173/summetry/
 - Add win streaks
 - Add shareable result text
 - Add puzzle archives
-- Add difficulty levels based on clue count
+- Add per-difficulty leaderboards
 
 ## Project Note
 

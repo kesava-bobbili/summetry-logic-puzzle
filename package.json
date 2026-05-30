@@ -4,7 +4,8 @@
   "private": false,
   "description": "A playable suMMetry number-and-logic puzzle project.",
   "scripts": {
-    "start": "python3 -m http.server 5173"
+    "start": "python3 -m http.server 5173",
+    "test": "node tests/verify-puzzles.mjs"
   },
   "keywords": [
     "summetry",

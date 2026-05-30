@@ -67,22 +67,37 @@ input {
   color: var(--text);
 }
 
-.difficulty-selector {
+.selector-row {
   display: flex;
   gap: 0.5rem;
   flex-wrap: wrap;
-  margin-bottom: 1rem;
+  align-items: center;
+  margin-bottom: 0.75rem;
 }
 
-.difficulty-button {
+.selector-label {
+  min-width: 4.5rem;
+  color: var(--muted);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+}
+
+.selector-button {
   min-width: 4rem;
 }
 
-.difficulty-button.active {
+.selector-button.active {
   background: var(--green);
   border-color: var(--green);
   color: #111211;
   font-weight: 700;
+}
+
+.difficulty-guide p {
+  margin: 0.35rem 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.5;
 }
 
 .title-row {
