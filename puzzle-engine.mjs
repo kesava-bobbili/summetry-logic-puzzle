@@ -1,8 +1,10 @@
 export const gridSizes = {
-  3: { size: 3, target: 15, max: 9 },
-  4: { size: 4, target: 34, max: 16 },
-  5: { size: 5, target: 65, max: 25 },
+  3: { size: 3, max: 9 },
+  4: { size: 4, max: 16 },
+  5: { size: 5, max: 25 },
 };
+
+const classicTargets = { 3: 15, 4: 34, 5: 65 };
 
 export const clueLevels = {
   easy: { minRatio: 0.5, maxRatio: 0.6 },
@@ -30,7 +32,7 @@ export function createPuzzle(size, seed, level) {
   for (let attempt = 0; attempt < 24; attempt += 1) {
     const candidate = buildPuzzleCandidate(size, seed + attempt, level, config);
 
-    if (countSolutions(size, config.target, config.max, candidate.givens) !== 1) {
+    if (countSolutions(size, candidate.target, config.max, candidate.givens) !== 1) {
       continue;
     }
 
@@ -53,11 +55,11 @@ export function createPuzzle(size, seed, level) {
   const chosen = bestInRange || bestFallback;
 
   if (!chosen) {
-    const solution = transformBoard(createMagicSquare(size), size, seed);
+    const { solution, target } = createClassicSolution(size, seed);
     return {
       name: `${size}x${size} ${capitalize(level)} #${seed}`,
       size,
-      target: config.target,
+      target,
       max: config.max,
       clueLevel: level,
       solution,
@@ -66,9 +68,9 @@ export function createPuzzle(size, seed, level) {
   }
 
   return {
-    name: `${size}x${size} ${capitalize(level)} #${seed}`,
+    name: `${size}x${size} ${capitalize(level)} #${seed} · target ${chosen.target}`,
     size,
-    target: config.target,
+    target: chosen.target,
     max: config.max,
     clueLevel: level,
     solution: chosen.solution,
@@ -91,7 +93,7 @@ function clueDistance(clueCount, minClues, maxClues, level) {
 function buildPuzzleCandidate(size, seed, level, config) {
   const [minClues, maxClues] = clueCountRange(size, level);
   const total = size * size;
-  const solution = transformBoard(createMagicSquare(size), size, seed);
+  const { solution, target } = createPuzzleSolution(size, config.max, seed);
   let bestSet = null;
   let bestCount = total + 1;
 
@@ -107,7 +109,7 @@ function buildPuzzleCandidate(size, seed, level, config) {
       clueSet.delete(index);
       const givens = buildGivens(solution, clueSet);
 
-      if (countSolutions(size, config.target, config.max, givens) !== 1) {
+      if (countSolutions(size, target, config.max, givens) !== 1) {
         clueSet.add(index);
       }
     }
@@ -125,7 +127,7 @@ function buildPuzzleCandidate(size, seed, level, config) {
         clueSet.delete(index);
         const givens = buildGivens(solution, clueSet);
 
-        if (countSolutions(size, config.target, config.max, givens) !== 1) {
+        if (countSolutions(size, target, config.max, givens) !== 1) {
           clueSet.add(index);
         }
       }
@@ -143,8 +145,117 @@ function buildPuzzleCandidate(size, seed, level, config) {
   const clueSet = bestSet || new Set(Array.from({ length: total }, (_, index) => index));
   return {
     solution,
+    target,
     givens: buildGivens(solution, clueSet),
   };
+}
+
+function createClassicSolution(size, seed) {
+  const solution = transformBoard(createMagicSquare(size), size, seed);
+  return { solution, target: classicTargets[size] };
+}
+
+function createPuzzleSolution(size, max, seed) {
+  const minTarget = size * 2;
+  const maxTarget = size * max - size;
+  const targets = [];
+
+  for (let target = minTarget; target <= maxTarget; target += 1) {
+    if (target !== classicTargets[size]) {
+      targets.push(target);
+    }
+  }
+
+  const order = shuffledIndexes(targets.length, seed);
+
+  for (let attempt = 0; attempt < Math.min(order.length, 28); attempt += 1) {
+    const target = targets[order[attempt]];
+    const solution = generateValidSolution(size, target, max, seed + target * 3);
+
+    if (solution) {
+      return { solution, target };
+    }
+  }
+
+  return createClassicSolution(size, seed);
+}
+
+function shuffledValues(min, max, seed) {
+  const values = Array.from({ length: max - min + 1 }, (_, index) => min + index);
+
+  for (let index = values.length - 1; index > 0; index -= 1) {
+    const swapAt = (seed + index * 5) % (index + 1);
+    [values[index], values[swapAt]] = [values[swapAt], values[index]];
+  }
+
+  return values;
+}
+
+export function generateValidSolution(size, target, max, seed) {
+  const boardState = Array(size * size).fill(null);
+  const lineDefs = createLines(size);
+  const cellLines = Array.from({ length: size * size }, () => []);
+
+  lineDefs.forEach((line) => {
+    line.forEach((index) => {
+      cellLines[index].push(line);
+    });
+  });
+
+  function lineStats(line) {
+    let filled = 0;
+    let lineTotal = 0;
+
+    line.forEach((index) => {
+      const value = boardState[index];
+
+      if (value !== null) {
+        filled += 1;
+        lineTotal += value;
+      }
+    });
+
+    return { filled, empty: line.length - filled, total: lineTotal };
+  }
+
+  function partialLineValid(line) {
+    const { empty, total: lineTotal } = lineStats(line);
+
+    if (empty === 0) {
+      return lineTotal === target;
+    }
+
+    const minTotal = lineTotal + empty;
+    const maxTotal = lineTotal + empty * max;
+    return lineTotal <= target && minTotal <= target && maxTotal >= target;
+  }
+
+  function constraintsValid(index) {
+    return cellLines[index].every(partialLineValid);
+  }
+
+  function solve(index) {
+    if (index === size * size) {
+      return true;
+    }
+
+    for (const value of shuffledValues(1, max, seed + index * 11)) {
+      boardState[index] = value;
+
+      if (constraintsValid(index) && solve(index + 1)) {
+        return true;
+      }
+    }
+
+    boardState[index] = null;
+    return false;
+  }
+
+  if (!solve(0)) {
+    return null;
+  }
+
+  return [...boardState];
 }
 
 function buildGivens(solution, clueSet) {

@@ -27,13 +27,13 @@ Choose a difficulty:
 - **Medium** — about 35–45% prefilled
 - **Hard** — about 20–30% prefilled
 
-Allowed values and target sums:
+Allowed values per grid:
 
-- `3x3`: digits `1–9`, target `15`
-- `4x4`: values `1–16`, target `34`
-- `5x5`: values `1–25`, target `65`
+- `3x3`: digits `1–9`
+- `4x4`: values `1–16`
+- `5x5`: values `1–25`
 
-Every row, column, and diagonal must add up to the target sum. Each generated puzzle has exactly one valid solution.
+The **target sum changes every puzzle** (shown in the header and puzzle name). It is not fixed at 15 — that was only the classic magic-square default. Every row, column, and diagonal must add up to that puzzle’s target. Each generated puzzle has exactly one valid solution.
 
 ## Features
 
