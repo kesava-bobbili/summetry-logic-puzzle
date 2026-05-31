@@ -1,12 +1,14 @@
 import {
+  MAX_VALUE,
+  MIN_VALUE,
   RULES_MESSAGE,
+  analyzeBoard,
   createLines,
   createPuzzle,
-  gridSizes,
+  isValidValue,
 } from "./puzzle-engine.mjs";
 
 const board = document.querySelector("#board");
-const targetSum = document.querySelector("#target-sum");
 const puzzleName = document.querySelector("#puzzle-name");
 const progressCount = document.querySelector("#progress-count");
 const lineStatus = document.querySelector("#line-status");
@@ -14,60 +16,52 @@ const timerText = document.querySelector("#timer");
 const message = document.querySelector("#message");
 const numberPad = document.querySelector("#number-pad");
 const checkButton = document.querySelector("#check-button");
-const hintButton = document.querySelector("#hint-button");
-const answerButton = document.querySelector("#answer-button");
 const resetButton = document.querySelector("#reset-button");
 const nextButton = document.querySelector("#next-button");
 const leaderboardButton = document.querySelector("#leaderboard-button");
-const sizeButtons = document.querySelectorAll(".size-button");
 const clueLevelButtons = document.querySelectorAll(".clue-level-button");
 const completeModal = document.querySelector("#complete-modal");
 const completeTime = document.querySelector("#complete-time");
+const completeSum = document.querySelector("#complete-sum");
 const playAgainButton = document.querySelector("#play-again-button");
 const leaderboardModal = document.querySelector("#leaderboard-modal");
 const leaderboardList = document.querySelector("#leaderboard-list");
 const closeLeaderboardButton = document.querySelector("#close-leaderboard-button");
 const confettiLayer = document.querySelector("#confetti-layer");
 
-let activeSize = 3;
+const lines = createLines();
+
 let activeClueLevel = "medium";
 let puzzleCounter = 1;
 let puzzle = null;
-let lines = [];
 let selectedCellIndex = null;
-let hintsRemaining = 3;
 let elapsedSeconds = 0;
 let timerId = null;
 let timerStarted = false;
 let solved = false;
 
-function newPuzzle(size = activeSize, clueLevel = activeClueLevel) {
+function newPuzzle(clueLevel = activeClueLevel) {
   completeModal.classList.add("hidden");
-  activeSize = size;
   activeClueLevel = clueLevel;
   stopTimer();
   elapsedSeconds = 0;
   timerStarted = false;
   solved = false;
-  hintsRemaining = 3;
   selectedCellIndex = null;
-  lines = createLines(size);
-  puzzle = createPuzzle(size, puzzleCounter, clueLevel);
+  puzzle = createPuzzle(puzzleCounter, clueLevel);
   puzzleCounter += 1;
   buildBoard();
   buildNumberPad();
-  updateSizeButtons();
   updateClueLevelButtons();
   updateStatus();
   updateTimer();
-  updateHintButton();
+  applyLineFeedback();
   setMessage(RULES_MESSAGE);
 }
 
 function buildBoard() {
   board.innerHTML = "";
-  board.style.setProperty("--size", puzzle.size);
-  targetSum.textContent = puzzle.target;
+  board.style.setProperty("--size", 3);
   puzzleName.textContent = puzzle.name;
 
   puzzle.givens.forEach((value, index) => {
@@ -75,7 +69,7 @@ function buildBoard() {
     input.className = "cell";
     input.type = "text";
     input.inputMode = "numeric";
-    input.maxLength = String(puzzle.max).length;
+    input.maxLength = 1;
     input.setAttribute("aria-label", `Cell ${index + 1}`);
     input.dataset.index = index;
 
@@ -83,7 +77,7 @@ function buildBoard() {
       input.value = value;
       input.readOnly = true;
       input.classList.add("fixed");
-      input.setAttribute("aria-label", `Fixed cell ${index + 1}, value ${value}`);
+      input.setAttribute("aria-label", `Clue cell ${index + 1}, value ${value}`);
     }
 
     input.addEventListener("input", handleInput);
@@ -96,7 +90,7 @@ function buildBoard() {
 function buildNumberPad() {
   numberPad.innerHTML = "";
 
-  for (let value = 1; value <= puzzle.max; value += 1) {
+  for (let value = MIN_VALUE; value <= MAX_VALUE; value += 1) {
     const button = document.createElement("button");
     button.type = "button";
     button.textContent = value;
@@ -119,24 +113,25 @@ function handleInput(event) {
 
   startTimer();
   const input = event.target;
-  input.value = input.value.replace(/\D/g, "").slice(0, String(puzzle.max).length);
+  input.value = input.value.replace(/\D/g, "").slice(0, 1);
   selectedCellIndex = Number(input.dataset.index);
-  updateCellFeedback(input);
+  updateCellMessage(input);
+  applyLineFeedback();
   updateStatus();
   detectSolved();
 }
 
 function handleFocus(event) {
   selectedCellIndex = Number(event.target.dataset.index);
-  updateCellFeedback(event.target);
+  updateCellMessage(event.target);
 }
 
 function handleArrowKeys(event) {
   const keys = {
     ArrowLeft: -1,
     ArrowRight: 1,
-    ArrowUp: -puzzle.size,
-    ArrowDown: puzzle.size,
+    ArrowUp: -3,
+    ArrowDown: 3,
   };
 
   if (!(event.key in keys)) {
@@ -161,7 +156,7 @@ function applyPadValue(value) {
   const cell = getCell(selectedCellIndex);
 
   if (!cell || cell.readOnly) {
-    setMessage("That cell is fixed. Pick an empty cell.");
+    setMessage("That cell is a clue and cannot be changed.");
     return;
   }
 
@@ -171,274 +166,165 @@ function applyPadValue(value) {
 }
 
 function values() {
-  return [...board.querySelectorAll(".cell")].map((cell) => Number(cell.value) || null);
-}
-
-function totalCells() {
-  return puzzle.size * puzzle.size;
+  return [...board.querySelectorAll(".cell")].map((cell) => {
+    const raw = cell.value.trim();
+    return raw === "" ? null : Number(raw);
+  });
 }
 
 function updateStatus() {
   const cells = values();
-  const filled = cells.filter(Boolean).length;
-  const correctLines = lines.filter((line) => {
-    const lineValues = line.map((index) => cells[index]);
-    return lineValues.every(Boolean) && sum(lineValues) === puzzle.target;
-  }).length;
+  const filled = cells.filter((value) => value !== null).length;
+  const analysis = analyzeBoard(cells);
 
-  progressCount.textContent = `${filled}/${totalCells()}`;
-  lineStatus.textContent = `${correctLines}/${lines.length}`;
+  progressCount.textContent = `${filled}/9`;
+  lineStatus.textContent = `${analysis.alignedLines}/8`;
 }
 
-function checkBoard() {
-  clearMarks();
-  const solvedNow = markBoardAndCheckSolved();
-
-  if (solvedNow) {
-    finishPuzzle();
-    return;
-  }
-
+function applyLineFeedback() {
   const cells = values();
-  const missing = cells.some((value) => !value);
+  const analysis = analyzeBoard(cells);
 
-  if (missing) {
-    setMessage("Good start. Fill every empty cell, then check again.");
-  } else {
-    setMessage("Some lines miss the target. Adjust the highlighted cells.", "warn");
-  }
-}
+  board.querySelectorAll(".cell").forEach((cell) => {
+    if (!cell.classList.contains("fixed")) {
+      cell.classList.remove("good", "bad");
+    }
+  });
 
-function markBoardAndCheckSolved() {
-  const cells = values();
-  const badCells = new Set();
-  let correctLines = 0;
-
-  lines.forEach((line) => {
-    const lineValues = line.map((index) => cells[index]);
-
-    if (lineValues.every(Boolean) && sum(lineValues) === puzzle.target) {
-      correctLines += 1;
-      line.forEach((index) => markCell(index, "good"));
+  analysis.lineStates.forEach((state, lineIndex) => {
+    if (state === "incomplete") {
       return;
     }
 
-    if (lineValues.every(Boolean)) {
-      line.forEach((index) => badCells.add(index));
-    }
+    const className = state === "aligned" ? "good" : "bad";
+    lines[lineIndex].forEach((index) => markCell(index, className));
   });
+}
 
-  badCells.forEach((index) => markCell(index, "bad"));
-  updateStatus();
+function checkBoard() {
+  const cells = values();
+  const analysis = analyzeBoard(cells);
 
-  return correctLines === lines.length && cells.every(Boolean);
+  applyLineFeedback();
+
+  if (analysis.solved) {
+    finishPuzzle(analysis.commonSum);
+    return;
+  }
+
+  if (cells.some((value) => value === null)) {
+    setMessage("Fill every cell, then check again.");
+    return;
+  }
+
+  if (analysis.inconsistent) {
+    setMessage("Completed lines disagree on the sum. Adjust the highlighted lines.", "warn");
+    return;
+  }
+
+  if (analysis.commonSum !== null) {
+    setMessage(
+      `Lines share sum ${analysis.commonSum} so far. Keep going until every row, column, and diagonal matches.`,
+    );
+    return;
+  }
+
+  setMessage("Some lines still need work. Check the highlighted rows, columns, or diagonals.", "warn");
 }
 
 function detectSolved() {
-  if (isBoardSolved()) {
-    clearMarks();
-    markBoardAndCheckSolved();
-    finishPuzzle();
+  const analysis = analyzeBoard(values());
+
+  if (analysis.solved) {
+    finishPuzzle(analysis.commonSum);
   }
 }
 
-function isBoardSolved() {
-  const cells = values();
-
-  if (!cells.every(Boolean)) {
-    return false;
-  }
-
-  return lines.every((line) => {
-    const lineValues = line.map((index) => cells[index]);
-    return sum(lineValues) === puzzle.target;
-  });
-}
-
-function showAnswer() {
-  stopTimer();
-  solved = true;
-
-  board.querySelectorAll(".cell").forEach((cell, index) => {
-    cell.value = puzzle.solution[index];
-    cell.classList.remove("bad", "hinted");
-    cell.classList.add("good");
-
-    if (!cell.classList.contains("fixed")) {
-      cell.classList.add("revealed");
-    }
-  });
-
-  updateStatus();
-  updateHintButton();
-  setMessage(`Answer shown. Study how each row, column, and diagonal totals ${puzzle.target}.`, "win");
-}
-
-function useHint() {
-  if (solved) {
-    return;
-  }
-
-  if (hintsRemaining === 0) {
-    setMessage("No hints left for this puzzle.", "warn");
-    return;
-  }
-
-  const index = findHintIndex();
-
-  if (index === null) {
-    detectSolved();
-    return;
-  }
-
-  startTimer();
-  const cell = getCell(index);
-  cell.value = puzzle.solution[index];
-  cell.classList.remove("bad", "revealed");
-  cell.classList.add("hinted", "good");
-  hintsRemaining -= 1;
-  selectedCellIndex = index;
-  updateHintButton();
-  updateStatus();
-  setMessage(`Hint used: Cell ${index + 1} is ${puzzle.solution[index]}.`);
-  detectSolved();
-}
-
-function findHintIndex() {
-  const cells = values();
-  const editableWrong = cells.findIndex(
-    (value, index) => puzzle.givens[index] === null && value !== puzzle.solution[index],
-  );
-  return editableWrong === -1 ? null : editableWrong;
-}
-
-function updateCellFeedback(input) {
+function updateCellMessage(input) {
   const index = Number(input.dataset.index);
-  const value = Number(input.value) || null;
-  input.classList.remove("good", "bad", "revealed", "hinted");
+  const value = input.value === "" ? null : Number(input.value);
 
   if (input.classList.contains("fixed")) {
-    setMessage(`Cell ${index + 1} is fixed. It is part of the puzzle clue.`);
+    setMessage(`Cell ${index + 1} is a clue.`);
     return;
   }
 
-  if (!value) {
-    setMessage(`Cell ${index + 1}: enter a number from 1 to ${puzzle.max}.`);
+  if (value === null) {
+    setMessage(`Cell ${index + 1}: enter a digit from 1 to 9.`);
     return;
   }
 
-  if (!isInPuzzleRange(value)) {
-    input.classList.add("bad");
-    setMessage(`Cell ${index + 1}: ${value} is outside this puzzle. Use 1 to ${puzzle.max}.`, "warn");
+  if (!isValidValue(value)) {
+    setMessage(`Cell ${index + 1}: use digits 1 to 9 only.`, "warn");
     return;
   }
 
-  const cells = values();
-  const issue = relatedLineIssue(index, cells);
+  const analysis = analyzeBoard(values());
+  const touching = lines
+    .map((line, lineIndex) => ({ line, lineIndex, state: analysis.lineStates[lineIndex] }))
+    .filter((entry) => entry.line.includes(index) && entry.state !== "incomplete");
 
-  if (issue) {
-    input.classList.add("bad");
-    setMessage(`Cell ${index + 1}: its ${issue.name} totals ${issue.total}, not ${puzzle.target}.`, "warn");
+  if (touching.some((entry) => entry.state === "conflict")) {
+    setMessage(`Cell ${index + 1}: completed lines disagree on the sum.`, "warn");
     return;
   }
 
-  if (value === puzzle.solution[index]) {
-    input.classList.add("good");
-    setMessage(`Cell ${index + 1}: fits the unique solution for this puzzle.`, "win");
+  const aligned = touching.filter((entry) => entry.state === "aligned");
+
+  if (aligned.length > 0 && analysis.commonSum !== null) {
+    setMessage(`Cell ${index + 1}: its completed lines match sum ${analysis.commonSum}.`);
     return;
   }
 
-  input.classList.add("bad");
-  setMessage(`Cell ${index + 1}: does not match the unique solution. ${explainWrongCell(index, cells)}`, "warn");
+  setMessage(`Cell ${index + 1}: value accepted. Complete a line to check its sum.`);
 }
 
-function explainWrongCell(index, cells) {
-  const issue = relatedLineIssue(index, cells);
-
-  if (issue) {
-    return `Its ${issue.name} totals ${issue.total}, not ${puzzle.target}.`;
-  }
-
-  return "Try a different value so the crossing lines can reach the target.";
-}
-
-function relatedLineIssue(index, cells) {
-  const names = [
-    ...Array(puzzle.size).fill("row"),
-    ...Array(puzzle.size).fill("column"),
-    "diagonal",
-    "diagonal",
-  ];
-
-  for (let lineIndex = 0; lineIndex < lines.length; lineIndex += 1) {
-    const line = lines[lineIndex];
-
-    if (!line.includes(index)) {
-      continue;
-    }
-
-    const lineValues = line.map((cellIndex) => cells[cellIndex]);
-
-    if (lineValues.every(Boolean) && sum(lineValues) !== puzzle.target) {
-      return {
-        name: names[lineIndex],
-        total: sum(lineValues),
-      };
-    }
-  }
-
-  return null;
-}
-
-function isInPuzzleRange(value) {
-  return value >= 1 && value <= puzzle.max;
-}
-
-function finishPuzzle() {
+function finishPuzzle(commonSum) {
   if (solved) {
     return;
   }
 
   solved = true;
   stopTimer();
-  updateHintButton();
-  saveLeaderboardTime(activeSize, elapsedSeconds);
+  saveLeaderboardTime(activeClueLevel, elapsedSeconds);
+  applyLineFeedback();
   flashCells();
   launchConfetti();
+  completeSum.textContent = `Common sum: ${commonSum}`;
   completeTime.textContent = `Time: ${formatTime(elapsedSeconds)}`;
   completeModal.classList.remove("hidden");
-  setMessage("Solved. Every direction keeps the sum constant.", "win");
+  setMessage(`Solved. Every row, column, and diagonal sums to ${commonSum}.`, "win");
 }
 
-function saveLeaderboardTime(size, seconds) {
-  const key = leaderboardKey(size);
-  const times = getLeaderboard(size);
+function saveLeaderboardTime(level, seconds) {
+  const key = leaderboardKey(level);
+  const times = getLeaderboard(level);
   times.push(seconds);
   localStorage.setItem(key, JSON.stringify(times.sort((a, b) => a - b).slice(0, 5)));
 }
 
-function getLeaderboard(size) {
+function getLeaderboard(level) {
   try {
-    return JSON.parse(localStorage.getItem(leaderboardKey(size))) || [];
+    return JSON.parse(localStorage.getItem(leaderboardKey(level))) || [];
   } catch {
     return [];
   }
 }
 
-function leaderboardKey(size) {
-  return `summetry-leaderboard-${size}`;
+function leaderboardKey(level) {
+  return `summetry-leaderboard-${level}`;
 }
 
 function showLeaderboard() {
   leaderboardList.innerHTML = "";
 
-  Object.values(gridSizes).forEach(({ size }) => {
+  Object.keys({ easy: 5, medium: 4, hard: 3 }).forEach((level) => {
     const section = document.createElement("section");
     const title = document.createElement("h3");
     const list = document.createElement("ol");
-    const times = getLeaderboard(size);
+    const times = getLeaderboard(level);
 
-    title.textContent = `${size}x${size}`;
+    title.textContent = capitalize(level);
 
     if (times.length === 0) {
       const empty = document.createElement("p");
@@ -457,6 +343,10 @@ function showLeaderboard() {
   });
 
   leaderboardModal.classList.remove("hidden");
+}
+
+function capitalize(text) {
+  return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
 function startTimer() {
@@ -491,30 +381,18 @@ function resetPuzzle() {
   elapsedSeconds = 0;
   timerStarted = false;
   solved = false;
-  hintsRemaining = 3;
   selectedCellIndex = null;
   buildBoard();
   updateStatus();
   updateTimer();
-  updateHintButton();
+  applyLineFeedback();
   setMessage(RULES_MESSAGE);
-}
-
-function updateSizeButtons() {
-  sizeButtons.forEach((button) => {
-    button.classList.toggle("active", Number(button.dataset.size) === activeSize);
-  });
 }
 
 function updateClueLevelButtons() {
   clueLevelButtons.forEach((button) => {
     button.classList.toggle("active", button.dataset.level === activeClueLevel);
   });
-}
-
-function updateHintButton() {
-  hintButton.textContent = `Hint (${hintsRemaining})`;
-  hintButton.disabled = hintsRemaining === 0 || solved;
 }
 
 function flashCells() {
@@ -539,12 +417,6 @@ function launchConfetti() {
   }, 1800);
 }
 
-function clearMarks() {
-  board.querySelectorAll(".cell").forEach((cell) => {
-    cell.classList.remove("good", "bad", "flash");
-  });
-}
-
 function markCell(index, className) {
   getCell(index).classList.add(className);
 }
@@ -558,26 +430,17 @@ function setMessage(text, tone = "") {
   message.className = `message ${tone}`.trim();
 }
 
-function sum(valuesToAdd) {
-  return valuesToAdd.reduce((total, value) => total + value, 0);
-}
-
-sizeButtons.forEach((button) => {
-  button.addEventListener("click", () => newPuzzle(Number(button.dataset.size), activeClueLevel));
-});
 clueLevelButtons.forEach((button) => {
-  button.addEventListener("click", () => newPuzzle(activeSize, button.dataset.level));
+  button.addEventListener("click", () => newPuzzle(button.dataset.level));
 });
 checkButton.addEventListener("click", checkBoard);
-hintButton.addEventListener("click", useHint);
-answerButton.addEventListener("click", showAnswer);
 resetButton.addEventListener("click", resetPuzzle);
-nextButton.addEventListener("click", () => newPuzzle(activeSize, activeClueLevel));
+nextButton.addEventListener("click", () => newPuzzle(activeClueLevel));
 leaderboardButton.addEventListener("click", showLeaderboard);
 playAgainButton.addEventListener("click", () => {
   completeModal.classList.add("hidden");
-  newPuzzle(activeSize, activeClueLevel);
+  newPuzzle(activeClueLevel);
 });
 closeLeaderboardButton.addEventListener("click", () => leaderboardModal.classList.add("hidden"));
 
-newPuzzle(3, "medium");
+newPuzzle("medium");

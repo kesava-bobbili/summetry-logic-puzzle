@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>suMMetry - Logic Puzzle Project</title>
+    <title>suMMetry - Equal-Sum Sandbox</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -19,26 +19,16 @@
           <a class="brand-link" href="https://github.com/kesava-bobbili/summetry-logic-puzzle" target="_blank" rel="noreferrer"
             >Logic Puzzle Project</a
           >
-          <div class="selector-row size-selector" aria-label="Choose puzzle size">
-            <span class="selector-label">Grid</span>
-            <button class="selector-button size-button active" type="button" data-size="3">3x3</button>
-            <button class="selector-button size-button" type="button" data-size="4">4x4</button>
-            <button class="selector-button size-button" type="button" data-size="5">5x5</button>
-          </div>
           <div class="selector-row clue-level-selector" aria-label="Choose difficulty">
             <span class="selector-label">Difficulty</span>
-            <button class="selector-button clue-level-button" type="button" data-level="easy">Easy</button>
-            <button class="selector-button clue-level-button active" type="button" data-level="medium">Medium</button>
-            <button class="selector-button clue-level-button" type="button" data-level="hard">Hard</button>
+            <button class="selector-button clue-level-button" type="button" data-level="easy">Easy (5 clues)</button>
+            <button class="selector-button clue-level-button active" type="button" data-level="medium">Medium (4 clues)</button>
+            <button class="selector-button clue-level-button" type="button" data-level="hard">Hard (3 clues)</button>
           </div>
-          <div class="title-row">
+          <div class="title-row title-row-single">
             <div>
-              <p class="kicker">Logic puzzle prototype</p>
+              <p class="kicker">3×3 equal-sum sandbox</p>
               <h1 id="game-title">suMMetry</h1>
-            </div>
-            <div class="target-box" aria-label="Target sum">
-              <span>Target</span>
-              <strong id="target-sum">—</strong>
             </div>
           </div>
         </header>
@@ -46,14 +36,14 @@
         <section class="status-strip" aria-live="polite">
           <div>
             <span class="status-label">Puzzle</span>
-            <strong id="puzzle-name">Classic 3x3</strong>
+            <strong id="puzzle-name">Medium #1</strong>
           </div>
           <div>
             <span class="status-label">Progress</span>
             <strong id="progress-count">0/9</strong>
           </div>
           <div>
-            <span class="status-label">Checks</span>
+            <span class="status-label">Lines</span>
             <strong id="line-status">0/8</strong>
           </div>
           <div>
@@ -67,14 +57,12 @@
         </section>
 
         <p id="message" class="message">
-          Fill the grid so that every row, every column, and both diagonals add up to the same target sum. Repeating
-          numbers is allowed as long as the values stay within the allowed range for the selected grid size.
+          Fill the 3×3 grid with digits 1–9 (repeats allowed). Every row, column, and diagonal must share the same sum.
+          The sum is not shown until you solve it.
         </p>
 
         <div class="actions">
           <button id="check-button" type="button">Check</button>
-          <button id="hint-button" type="button">Hint (3)</button>
-          <button id="answer-button" type="button">Show Answer</button>
           <button id="reset-button" type="button">Reset</button>
           <button id="next-button" type="button">New Puzzle</button>
           <button id="leaderboard-button" type="button">Leaderboard</button>
@@ -86,28 +74,32 @@
       <aside class="side-panel" aria-label="How to play">
         <h2>Rules</h2>
         <p>
-          Fill the grid so that every row, every column, and both diagonals add up to the same target sum. Repeating
-          numbers is allowed as long as the values stay within the allowed range for the selected grid size.
+          This is a sandbox equal-sum puzzle, not a magic square. Use digits <strong>1–9</strong> in a
+          <strong>3×3</strong> grid. Numbers may repeat. There is <strong>no target sum</strong> shown while you play.
+        </p>
+        <p>
+          When every row, every column, and both diagonals is filled, they must all share the <strong>same sum</strong>.
+          Any valid arrangement counts.
         </p>
         <h2>How It Works</h2>
         <ol>
-          <li>Pick a grid size and a difficulty level.</li>
-          <li>Every row, column, and diagonal must hit the target sum.</li>
-          <li>Values must stay within the allowed range for that grid.</li>
-          <li>The target sum is different for each puzzle — check the Target box.</li>
-          <li>Use up to 3 hints when stuck.</li>
-          <li>Fixed cells cannot be changed.</li>
+          <li>Choose Easy (5 clues), Medium (4 clues), or Hard (3 clues).</li>
+          <li>Fill the empty cells. Clue cells cannot be changed.</li>
+          <li>When a row, column, or diagonal is fully filled, it is marked green or red immediately.</li>
+          <li>Green means it matches the current common sum. Red means lines disagree or the sum does not match.</li>
+          <li>Press <strong>Check</strong> to validate the whole board.</li>
+          <li>After you solve it, the common sum you achieved is revealed.</li>
         </ol>
         <div class="difficulty-guide">
           <h3>Difficulty</h3>
-          <p><strong>Easy:</strong> about 50–60% of cells are prefilled.</p>
-          <p><strong>Medium:</strong> about 35–45% prefilled.</p>
-          <p><strong>Hard:</strong> about 20–30% prefilled.</p>
+          <p><strong>Easy:</strong> 5 prefilled clues.</p>
+          <p><strong>Medium:</strong> 4 prefilled clues.</p>
+          <p><strong>Hard:</strong> 3 prefilled clues.</p>
         </div>
         <div class="feedback-guide">
           <h3>Feedback</h3>
-          <p><span class="guide-dot good-dot"></span>Green means the line or cell matches the target.</p>
-          <p><span class="guide-dot bad-dot"></span>Red means a completed line misses the target.</p>
+          <p><span class="guide-dot good-dot"></span>Green line — matches the current common sum.</p>
+          <p><span class="guide-dot bad-dot"></span>Red line — wrong sum or conflict with other completed lines.</p>
         </div>
       </aside>
     </main>
@@ -117,6 +109,7 @@
     <div id="complete-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="complete-title">
       <div class="modal-card">
         <h2 id="complete-title">Puzzle Solved</h2>
+        <p id="complete-sum">Common sum: —</p>
         <p id="complete-time">Time: 00:00</p>
         <button id="play-again-button" type="button">Play Again</button>
       </div>

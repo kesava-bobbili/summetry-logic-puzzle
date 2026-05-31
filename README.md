@@ -2,109 +2,55 @@
 
 **[Play live](https://kesava-bobbili.github.io/summetry-logic-puzzle/)** · [Repository](https://github.com/kesava-bobbili/summetry-logic-puzzle)
 
-A playable number-and-logic puzzle project.
+A **3×3 equal-sum sandbox** puzzle. This is not a magic square — there is no hidden answer and no fixed target shown during play.
 
-suMMetry is built around one simple idea: fill the grid so the sum stays constant in every direction. The game is quick to understand, but every move matters because each number affects a row, a column, and sometimes a diagonal.
+## Rules
 
-## Why I Built This
+- Grid size is **3×3** only.
+- Use digits **1–9**. Numbers may **repeat**.
+- You start with **prefilled clues** (see difficulty below).
+- **No target sum** is displayed while you play.
+- When a **row, column, or diagonal** is completely filled, the game immediately shows whether it matches the **current common sum** (the sum agreed on by all completed lines so far).
+- You win when **all nine cells** are filled and **all eight lines** (3 rows, 3 columns, 2 diagonals) share the **same sum**.
+- Any arrangement that satisfies those equal-sum constraints is accepted.
+- After you solve the puzzle, the game reveals the **common sum you achieved**.
 
-This project was created as a polished browser-game prototype. The goal is to show a clean core game loop:
+## Difficulty
 
-- understand the target sum
-- fill the empty cells
-- get immediate feedback
-- solve the grid by balancing rows, columns, and diagonals
+| Level  | Prefilled clues |
+|--------|-----------------|
+| Easy   | 5               |
+| Medium | 4               |
+| Hard   | 3               |
 
-## How To Play
-
-Fill the grid so that every row, every column, and both diagonals add up to the same target sum. Repeating numbers is allowed as long as the values stay within the allowed range for the selected grid size.
-
-Choose a puzzle size: `3x3`, `4x4`, or `5x5`.
-
-Choose a difficulty:
-
-- **Easy** — about 50–60% of cells prefilled
-- **Medium** — about 35–45% prefilled
-- **Hard** — about 20–30% prefilled
-
-Allowed values per grid:
-
-- `3x3`: digits `1–9`
-- `4x4`: values `1–16`
-- `5x5`: values `1–25`
-
-The **target sum changes every puzzle** (shown in the header and puzzle name). It is not fixed at 15 — that was only the classic magic-square default. Every row, column, and diagonal must add up to that puzzle’s target. Each generated puzzle has exactly one valid solution.
+Clues are random digits in random cells. They are starting hints only — not a hidden solution.
 
 ## Features
 
-- Playable 3x3, 4x4, and 5x5 sum puzzles
-- Easy, Medium, and Hard clue levels
-- Unique-solution puzzle generation with backtracking verification
-- Repeating numbers allowed within the grid range
-- Fixed clue cells
-- Number-only inputs
-- Instant right/wrong feedback for each input
-- Row, column, and diagonal validation
-- Helpful explanation when a completed line misses the target
-- Timer that starts on first input and stops on solve
-- Local top-five leaderboard per grid size
-- Completion modal with celebration animation
-- Hint system with three hints per puzzle
-- Show Answer button for demo/review mode
-- Reset and New Puzzle controls
-- Keyboard arrow navigation
-- Mobile number pad for touch play
-- Responsive layout for desktop and mobile
-- Dark monospace game interface
-
-## Play Online
-
-https://kesava-bobbili.github.io/summetry-logic-puzzle/
+- Live line feedback on completed rows, columns, and diagonals
+- Check button for full-board validation
+- Timer and per-difficulty leaderboard
+- Reset and New Puzzle
+- Number pad and keyboard navigation
 
 ## Run Locally
-
-This project is dependency-free. Open `index.html` directly in a browser, or run a local server:
 
 ```bash
 python3 -m http.server 5173
 ```
 
-Then visit:
+Open http://localhost:5173/ (or `/summetry/` if this folder lives inside a larger repo).
 
-```text
-http://localhost:5173/
-```
-
-If this folder is inside a larger workspace, visit:
-
-```text
-http://localhost:5173/summetry/
-```
-
-## Verify Puzzles
-
-Run the unique-solution verification checks:
+## Verify
 
 ```bash
-node tests/verify-puzzles.mjs
+npm test
 ```
 
 ## Project Files
 
-- `index.html` - app structure
-- `styles.css` - responsive visual design
-- `script.js` - UI, validation, timer, leaderboard, hints, feedback, and interactions
-- `puzzle-engine.mjs` - puzzle generation, solver, and uniqueness checks
-- `tests/verify-puzzles.mjs` - automated puzzle verification
-
-## Suggested Roadmap
-
-- Add a daily puzzle seed
-- Add win streaks
-- Add shareable result text
-- Add puzzle archives
-- Add per-difficulty leaderboards
-
-## Project Note
-
-This is an MVP designed to prove the suMMetry game concept quickly. The next best step is to review the gameplay, tune the difficulty, and decide whether the 3x3 format should stay as the main mode or become the beginner level for larger grids.
+- `index.html` — layout and rules copy
+- `styles.css` — visuals
+- `script.js` — UI and gameplay
+- `puzzle-engine.mjs` — clue generation and equal-sum analysis
+- `tests/verify-sandbox.mjs` — automated checks
